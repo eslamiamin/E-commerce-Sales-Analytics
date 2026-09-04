@@ -5,11 +5,11 @@
 # Load the raw CSV files into pandas DataFrames.
 # Each file represents a major entity in the e-commerce dataset.
 
-df_customers = pd.read_csv('customers.csv')
-df_items = pd.read_csv('order_items.csv')
-df_orders = pd.read_csv('orders.csv')
-df_products = pd.read_csv('products.csv')
-df_payments = pd.read_csv('payments.csv')
+df_customers = pd.read_csv('data/customers.csv')
+df_items = pd.read_csv('data/order_items.csv')
+df_orders = pd.read_csv('data/orders.csv')
+df_products = pd.read_csv('data/products.csv')
+df_payments = pd.read_csv('data/payments.csv')
 
 
 # ============================================================
