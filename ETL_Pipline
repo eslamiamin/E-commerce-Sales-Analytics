@@ -1,0 +1,643 @@
+
+df_customers= pd.read_csv('/content/drive/MyDrive/Yootab/customers.csv')
+df_items= pd.read_csv('/content/drive/MyDrive/Yootab/order_items.csv')
+df_orders= pd.read_csv('/content/drive/MyDrive/Yootab/orders.csv')
+df_products= pd.read_csv('/content/drive/MyDrive/Yootab/products.csv')
+df_payments = pd.read_csv('/content/drive/MyDrive/Yootab/payments.csv')
+
+for name, df in {
+    'customers': df_customers,
+    'products': df_products,
+    'orders': df_orders,
+    'order_items': df_items,
+    'payments': df_payments
+}.items():
+    print(f"\n {name}")
+    print("Rows:", len(df))
+    print("Columns:", df.columns.tolist())
+    print("\nMissing values:")
+    print(df.isnull().sum())
+    print("Duplicates:", df.duplicated().sum())
+
+df_customers[df_customers.duplicated(keep=False)].sort_values('customer_id')
+
+df_items[df_items.duplicated(keep=False)].sort_values(['order_id', 'product_id'])
+
+print("Gender:")
+print(df_customers['gender'].value_counts(dropna=False))
+
+print("\nSegment:")
+print(df_customers['segment'].value_counts(dropna=False))
+
+print("\nOrder Status:")
+print(df_orders['status'].value_counts(dropna=False))
+
+print("\nOrder Channel:")
+print(df_orders['channel'].value_counts(dropna=False))
+
+print("\nPayment Status:")
+print(df_payments['payment_status'].value_counts(dropna=False))
+
+print("\nPayment Method:")
+print(df_payments['payment_method'].value_counts(dropna=False))
+
+print("\nProduct Category:")
+print(df_products['category'].value_counts(dropna=False))
+
+print("Products:")
+print(df_products[['unit_cost', 'list_price']].describe())
+
+print("\nOrder Items:")
+print(df_items[['quantity', 'unit_price', 'discount_percent']].describe())
+
+print("\nOrders:")
+print(df_orders[['shipping_fee', 'order_total_declared']].describe())
+
+print("\nPayments:")
+print(df_payments[['paid_amount']].describe())
+
+print("Negative / zero quantities:")
+print(df_items[df_items['quantity'] <= 0])
+
+print("Negative unit prices:")
+print(df_items[df_items['unit_price'] < 0])
+
+print("Negative order/payment amounts:")
+print("Orders:")
+print(df_orders[df_orders['order_total_declared'] < 0])
+
+print("\nPayments:")
+print(df_payments[df_payments['paid_amount'] < 0])
+
+print("DATA TYPES")
+
+for name, df in {
+    "customers": df_customers,
+    "products": df_products,
+    "orders": df_orders,
+    "order_items": df_items,
+    "payments": df_payments
+}.items():
+    print(f"\n{name}")
+    print(df.dtypes)
+
+print("REFERENTIAL INTEGRITY")
+
+# Orders > Customers
+orphan_orders_customers = ~df_orders["customer_id"].isin(df_customers["customer_id"])
+print("Orders with invalid customer_id:", orphan_orders_customers.sum())
+
+# Order Items > Orders
+orphan_items_orders = ~df_items["order_id"].isin(df_orders["order_id"])
+print("Order items with invalid order_id:", orphan_items_orders.sum())
+
+# Order Items > Products
+orphan_items_products = ~df_items["product_id"].isin(df_products["product_id"])
+print("Order items with invalid product_id:", orphan_items_products.sum())
+
+# Payments > Orders
+orphan_payments_orders = ~df_payments["order_id"].isin(df_orders["order_id"])
+print("Payments with invalid order_id:", orphan_payments_orders.sum())
+
+df_customers["registration_date"] = pd.to_datetime(
+    df_customers["registration_date"], errors="coerce"
+)
+
+df_orders["order_date"] = pd.to_datetime(
+    df_orders["order_date"], errors="coerce"
+)
+
+df_payments["payment_date"] = pd.to_datetime(
+    df_payments["payment_date"], errors="coerce"
+)
+
+
+before_customers = len(df_customers)
+before_items = len(df_items)
+
+df_customers = df_customers.drop_duplicates()
+df_items = df_items.drop_duplicates()
+
+print("Removed duplicate customers:", before_customers - len(df_customers))
+print("Removed duplicate order items:", before_items - len(df_items))
+
+print("\nInvalid customer dates:", df_customers["registration_date"].isna().sum())
+print("Invalid order dates:", df_orders["order_date"].isna().sum())
+print("Invalid payment dates:", df_payments["payment_date"].isna().sum())
+
+invalid_order_dates = df_orders[
+    pd.to_datetime(df_orders["order_date"], errors="coerce").isna()
+]["order_date"]
+
+invalid_payment_dates = df_payments[
+    pd.to_datetime(df_payments["payment_date"], errors="coerce").isna()
+]["payment_date"]
+
+print("Invalid Order Dates")
+print(invalid_order_dates.value_counts(dropna=False).head(20))
+
+print("\n Invalid Payment Dates")
+print(invalid_payment_dates.value_counts(dropna=False).head(20))
+
+print("Raw order_date examples:")
+print(df_orders["order_date"].drop_duplicates().head(20).tolist())
+
+print("\nRaw payment_date examples:")
+print(df_payments["payment_date"].drop_duplicates().head(20).tolist())
+
+print("Orders: Missing order_date by status")
+
+print(
+    df_orders[df_orders["order_date"].isna()]["status"]
+    .value_counts(dropna=False)
+)
+
+print("\n Payments: Missing payment_date by status ")
+
+print(
+    df_payments[df_payments["payment_date"].isna()]["payment_status"]
+    .value_counts(dropna=False)
+)
+
+print("Orders with missing order_date")
+
+print(
+    df_orders[df_orders["order_date"].isna()][
+        ["order_id", "customer_id", "status", "channel",
+         "shipping_fee", "order_total_declared"]
+    ].head(20)
+)
+
+print(" MISSING VALUES ")
+
+for name, df in {
+    "customers": df_customers,
+    "products": df_products,
+    "orders": df_orders,
+    "order_items": df_items,
+    "payments": df_payments
+}.items():
+
+    print(f"\n{name}")
+    missing = df.isna().sum()
+    print(missing[missing > 0])
+
+categorical_missing = {
+    "gender": "Unknown",
+    "city": "Unknown",
+    "province": "Unknown",
+    "acquisition_channel": "Unknown"
+}
+
+for col, value in categorical_missing.items():
+    df_customers[col] = df_customers[col].fillna(value)
+
+df_payments["payment_method"] = df_payments["payment_method"].fillna("Unknown")
+
+df_items = df_items.dropna(subset=["quantity"])
+
+df_items["discount_percent"] = df_items["discount_percent"].fillna(0)
+
+
+df_items = df_items[df_items["quantity"] > 0]
+df_items = df_items[df_items["unit_price"] >= 0]
+
+print(" CLEANED DATASET SIZES" )
+
+for name, df in {
+    "customers": df_customers,
+    "products": df_products,
+    "orders": df_orders,
+    "order_items": df_items,
+    "payments": df_payments
+}.items():
+    print(f"{name}: {len(df):,} rows")
+
+print("\nCustomers missing:")
+print(df_customers.isna().sum()[df_customers.isna().sum() > 0])
+
+print("\nOrders missing:")
+print(df_orders.isna().sum()[df_orders.isna().sum() > 0])
+
+print("\nOrder items missing:")
+print(df_items.isna().sum()[df_items.isna().sum() > 0])
+
+print("\nPayments missing:")
+print(df_payments.isna().sum()[df_payments.isna().sum() > 0])
+
+print("\nInvalid quantities:", (df_items["quantity"] <= 0).sum())
+print("Negative unit prices:", (df_items["unit_price"] < 0).sum())
+
+print("Total customers:", len(df_customers))
+print("Unique customer IDs:", df_customers["customer_id"].nunique())
+print("Duplicate customer IDs:", df_customers["customer_id"].duplicated().sum())
+
+duplicate_customers = df_customers[
+    df_customers["customer_id"].duplicated(keep=False)
+].sort_values("customer_id")
+
+print(duplicate_customers)
+
+duplicate_ids = df_customers[
+    df_customers["customer_id"].duplicated(keep=False)
+]["customer_id"].unique()
+
+for customer_id in duplicate_ids:
+    order_count = (df_orders["customer_id"] == customer_id).sum()
+
+    print(
+        f"customer_id = {customer_id} | "
+        f"orders = {order_count}"
+    )
+
+for customer_id in duplicate_ids:
+    print(f"\n===== {customer_id} =====")
+    print(
+        df_customers[
+            df_customers["customer_id"] == customer_id
+        ].T
+    )
+
+df_customers = df_customers.drop_duplicates(
+    subset=["customer_id"],
+    keep="first"
+).copy()
+
+print("Customers after deduplication:", len(df_customers))
+print("Unique customer IDs:", df_customers["customer_id"].nunique())
+print("Duplicate customer IDs:", df_customers["customer_id"].duplicated().sum())
+
+assert df_customers["customer_id"].is_unique
+assert df_orders["customer_id"].isin(
+    df_customers["customer_id"]
+).all()
+
+#SQL PART:
+DB_PATH = Path("database1.db")
+if DB_PATH.exists():
+    DB_PATH.unlink()
+
+conn = sqlite3.connect(DB_PATH)
+conn.execute("PRAGMA foreign_keys = ON;")
+
+print("New database created.")
+
+
+
+
+schema_sql = """
+CREATE TABLE IF NOT EXISTS customers (
+    customer_id INTEGER PRIMARY KEY,
+    customer_name TEXT,
+    gender TEXT,
+    birth_year INTEGER,
+    city TEXT,
+    province TEXT,
+    segment TEXT,
+    registration_date DATE,
+    acquisition_channel TEXT
+);
+
+CREATE TABLE IF NOT EXISTS products (
+    product_id INTEGER PRIMARY KEY,
+    product_name TEXT,
+    category TEXT,
+    brand TEXT,
+    unit_cost REAL,
+    list_price REAL,
+    supplier TEXT,
+    is_active INTEGER
+);
+
+CREATE TABLE IF NOT EXISTS orders (
+    order_id INTEGER PRIMARY KEY,
+    customer_id INTEGER,
+    order_date DATE,
+    status TEXT,
+    channel TEXT,
+    shipping_city TEXT,
+    shipping_fee REAL,
+    order_total_declared REAL,
+    FOREIGN KEY (customer_id) REFERENCES customers(customer_id)
+);
+
+CREATE TABLE IF NOT EXISTS order_items (
+    order_id INTEGER,
+    product_id INTEGER,
+    quantity REAL,
+    unit_price REAL,
+    discount_percent REAL,
+    FOREIGN KEY (order_id) REFERENCES orders(order_id),
+    FOREIGN KEY (product_id) REFERENCES products(product_id)
+);
+
+CREATE TABLE IF NOT EXISTS payments (
+    order_id INTEGER,
+    payment_date DATE,
+    payment_status TEXT,
+    payment_method TEXT,
+    paid_amount REAL,
+    FOREIGN KEY (order_id) REFERENCES orders(order_id)
+);
+"""
+conn.executescript(schema_sql)
+conn.commit()
+
+df_customers.to_sql("customers", conn, if_exists="append", index=False)
+df_products.to_sql("products", conn, if_exists="append", index=False)
+df_orders.to_sql("orders", conn, if_exists="append", index=False)
+df_items.to_sql("order_items", conn, if_exists="append", index=False)
+df_payments.to_sql("payments", conn, if_exists="append", index=False)
+
+tables = ["customers", "products", "orders", "order_items", "payments"]
+
+for table in tables:
+    result = pd.read_sql_query(
+        f"SELECT COUNT(*) AS count FROM {table}",
+        conn
+    )
+    print(table, ":", result.iloc[0]["count"])
+
+query = """
+SELECT
+    status,
+    COUNT(*) AS order_count
+FROM orders
+GROUP BY status
+ORDER BY order_count DESC;
+"""
+
+pd.read_sql_query(query, conn)
+
+query = """
+SELECT
+    c.customer_id,
+    c.customer_name,
+    SUM(
+        oi.quantity
+        * oi.unit_price
+        * (1 - oi.discount_percent / 100.0)
+    ) AS total_sales
+FROM customers c
+JOIN orders o
+    ON c.customer_id = o.customer_id
+JOIN order_items oi
+    ON o.order_id = oi.order_id
+WHERE o.status IN ('delivered', 'completed')
+GROUP BY
+    c.customer_id,
+    c.customer_name
+ORDER BY total_sales DESC
+LIMIT 10;
+"""
+
+top_10_customers = pd.read_sql_query(query, conn)
+
+top_10_customers
+
+top_10_customers = pd.read_sql_query(query, conn)
+
+print("Top 10 Customers by Total Sales")
+display(top_10_customers)
+
+query_top_products = """
+WITH product_sales AS (
+    SELECT
+        p.category,
+        p.product_id,
+        p.product_name,
+        SUM(
+            oi.quantity
+            * oi.unit_price
+            * (1 - oi.discount_percent / 100.0)
+        ) AS total_sales
+    FROM products p
+    JOIN order_items oi
+        ON p.product_id = oi.product_id
+    JOIN orders o
+        ON oi.order_id = o.order_id
+    WHERE o.status IN ('delivered', 'completed')
+    GROUP BY
+        p.category,
+        p.product_id,
+        p.product_name
+),
+
+ranked_products AS (
+    SELECT
+        category,
+        product_id,
+        product_name,
+        total_sales,
+        ROW_NUMBER() OVER (
+            PARTITION BY category
+            ORDER BY total_sales DESC
+        ) AS rank
+    FROM product_sales
+)
+
+SELECT
+    category,
+    product_id,
+    product_name,
+    total_sales,
+    rank
+FROM ranked_products
+WHERE rank <= 3
+ORDER BY
+    category,
+    rank;
+"""
+
+top_3_products = pd.read_sql_query(query_top_products, conn)
+
+top_3_products
+
+top_3_products = pd.read_sql_query(query_top_products, conn)
+
+print("Top 3 Products per Category")
+display(top_3_products)
+
+query_status_inconsistencies = """
+SELECT
+    o.status AS order_status,
+    p.payment_status,
+    COUNT(*) AS order_count,
+    SUM(p.paid_amount) AS total_paid_amount
+FROM orders o
+JOIN payments p
+    ON o.order_id = p.order_id
+WHERE
+    (o.status = 'cancelled' AND p.payment_status IN ('paid', 'partially_paid'))
+    OR
+    (o.status = 'returned' AND p.payment_status = 'paid')
+    OR
+    (o.status = 'delivered' AND p.payment_status = 'failed')
+GROUP BY
+    o.status,
+    p.payment_status
+ORDER BY order_count DESC;
+"""
+
+status_inconsistencies = pd.read_sql_query(query_status_inconsistencies, conn)
+
+status_inconsistencies
+
+status_inconsistencies = pd.read_sql_query(
+    query_status_inconsistencies,
+    conn
+)
+
+print("Order/Payment Status Inconsistencies")
+display(status_inconsistencies)
+
+queries_sql = """
+-- Query 1: Top 10 Customers by Total Sales
+SELECT
+    c.customer_id,
+    c.customer_name,
+    SUM(
+        oi.quantity
+        * oi.unit_price
+        * (1 - oi.discount_percent / 100.0)
+    ) AS total_sales
+FROM customers c
+JOIN orders o
+    ON c.customer_id = o.customer_id
+JOIN order_items oi
+    ON o.order_id = oi.order_id
+WHERE o.status IN ('delivered', 'completed')
+GROUP BY
+    c.customer_id,
+    c.customer_name
+ORDER BY total_sales DESC
+LIMIT 10;
+
+
+-- Query 2: Top 3 Products per Category
+WITH product_sales AS (
+    SELECT
+        p.category,
+        p.product_id,
+        p.product_name,
+        SUM(
+            oi.quantity
+            * oi.unit_price
+            * (1 - oi.discount_percent / 100.0)
+        ) AS total_sales
+    FROM products p
+    JOIN order_items oi
+        ON p.product_id = oi.product_id
+    JOIN orders o
+        ON oi.order_id = o.order_id
+    WHERE o.status IN ('delivered', 'completed')
+    GROUP BY
+        p.category,
+        p.product_id,
+        p.product_name
+),
+
+ranked_products AS (
+    SELECT
+        category,
+        product_id,
+        product_name,
+        total_sales,
+        ROW_NUMBER() OVER (
+            PARTITION BY category
+            ORDER BY total_sales DESC
+        ) AS rank
+    FROM product_sales
+)
+
+SELECT
+    category,
+    product_id,
+    product_name,
+    total_sales,
+    rank
+FROM ranked_products
+WHERE rank <= 3
+ORDER BY
+    category,
+    rank;8
+
+
+-- Query 3: Order/Payment Status Inconsistencies
+SELECT
+    o.status AS order_status,
+    p.payment_status,
+    COUNT(*) AS order_count,
+    SUM(p.paid_amount) AS total_paid_amount
+FROM orders o
+JOIN payments p
+    ON o.order_id = p.order_id
+WHERE
+    (o.status = 'cancelled' AND p.payment_status IN ('paid', 'partially_paid'))
+    OR
+    (o.status = 'returned' AND p.payment_status = 'paid')
+    OR
+    (o.status = 'delivered' AND p.payment_status = 'failed')
+GROUP BY
+    o.status,
+    p.payment_status
+ORDER BY order_count DESC;
+"""
+
+with open("queries.sql", "w", encoding="utf-8") as f:
+    f.write(queries_sql)
+
+print("queries.sql saved successfully.")
+
+#database validation
+
+tables = ["customers", "products", "orders", "order_items", "payments"]
+
+print("Row counts:")
+for table in tables:
+    count = pd.read_sql_query(
+        f"SELECT COUNT(*) AS count FROM {table}",
+        conn
+    ).iloc[0]["count"]
+
+    print(f"{table}: {count}")
+
+print("\nForeign key violations:")
+
+for table in tables:
+    violations = pd.read_sql_query(
+        f"PRAGMA foreign_key_check({table});",
+        conn
+    )
+
+    print(f"{table}: {len(violations)} violations")
+
+with open("schema.sql", "w", encoding="utf-8") as f:
+    f.write(schema_sql)
+
+requirements = """pandas"""
+
+with open("requirements.txt", "w", encoding="utf-8") as f:
+    f.write(requirements)
+
+query = """
+SELECT
+    p.category,
+    SUM(
+        oi.quantity
+        * oi.unit_price
+        * (1 - oi.discount_percent / 100.0)
+    ) AS total_sales
+FROM products p
+JOIN order_items oi
+    ON p.product_id = oi.product_id
+JOIN orders o
+    ON oi.order_id = o.order_id
+WHERE o.status IN ('delivered', 'completed')
+GROUP BY p.category
+ORDER BY total_sales DESC;
+"""
+
+category_sales = pd.read_sql_query(query, conn)
+
+category_sales
