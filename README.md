@@ -2,161 +2,115 @@
 
 ## Project Overview
 
-This project demonstrates an end-to-end data analytics workflow for an e-commerce sales dataset.
+This project demonstrates an end-to-end data analytics and ETL workflow for an e-commerce sales dataset.
 
-The project covers the complete process from raw data ingestion and data quality assessment to data cleaning, relational database creation, and SQL-based business analysis.
+The project starts with raw transactional CSV files and applies data profiling, quality assessment, cleaning, validation, relational database modeling, and SQL-based business analysis.
 
-The main objective is to transform raw transactional data into a structured analytical dataset and answer practical business questions related to customers, products, sales performance, and payment consistency.
-
----
-
-## Business Questions
-
-The analysis focuses on several practical business questions:
-
-* Which customers generate the highest total sales?
-* Which products perform best within each product category?
-* How are orders distributed across different statuses?
-* Are there inconsistencies between order status and payment status?
-* Which product categories generate the highest sales?
-* Does the transactional data satisfy basic data quality and referential integrity requirements?
+The main objective is to transform raw operational data into a clean and structured analytical database and extract meaningful business insights from customers, products, orders, order items, and payments.
 
 ---
 
-## Dataset
-
-The project uses five related datasets:
-
-| Dataset       | Description                                          |
-| ------------- | ---------------------------------------------------- |
-| `customers`   | Customer demographic and registration information    |
-| `products`    | Product, category, pricing, and supplier information |
-| `orders`      | Order-level transactional information                |
-| `order_items` | Product-level details for each order                 |
-| `payments`    | Payment status, method, date, and amount             |
-
-The datasets form a relational structure similar to a real-world e-commerce database.
-
-### Data Model
-
-The main relationships are:
+## Project Workflow
 
 ```text
-customers
-    │
-    └──< orders
-             │
-             ├──< order_items >── products
-             │
-             └──< payments
-```
-
----
-
-## Workflow
-
-The project follows the following analytical pipeline:
-
-```text
-Raw CSV Files
-      ↓
-Data Loading
-      ↓
+Raw CSV Data
+     ↓
 Data Profiling
-      ↓
+     ↓
 Data Quality Assessment
-      ↓
-Data Cleaning
-      ↓
-Referential Integrity Validation
-      ↓
-SQLite Database
-      ↓
+     ↓
+Data Cleaning & Transformation
+     ↓
+Data Validation
+     ↓
+Relational Database Creation
+     ↓
+Data Loading
+     ↓
 SQL Analysis
-      ↓
+     ↓
 Business Insights
 ```
 
 ---
 
-## 1. Data Loading
+## Dataset
 
-The raw CSV files are loaded into pandas DataFrames.
+The project contains five related datasets:
 
-The initial inspection includes:
+| Dataset           | Description                                                             |
+| ----------------- | ----------------------------------------------------------------------- |
+| `customers.csv`   | Customer information, demographics, segmentation, and registration data |
+| `products.csv`    | Product information, categories, pricing, brands, and suppliers         |
+| `orders.csv`      | Order-level transaction and operational information                     |
+| `order_items.csv` | Product-level details for each order                                    |
+| `payments.csv`    | Payment dates, methods, statuses, and amounts                           |
 
-* Row and column counts
-* Column names
+The datasets represent a relational e-commerce environment where customer, product, order, and payment data are connected through primary and foreign-key relationships.
+
+The raw datasets are provided in `data.zip`.
+
+---
+
+## Data Model
+
+The main relationships between the datasets are:
+
+```text
+Customers
+    │
+    └──< Orders
+             │
+             ├──< Order Items >── Products
+             │
+             └──< Payments
+```
+
+This structure allows customer-level, order-level, product-level, and payment-level analysis.
+
+---
+
+## ETL Pipeline
+
+The main ETL workflow is implemented in:
+
+`ETL_Pipeline.py`
+
+The pipeline performs the following steps:
+
+### 1. Data Ingestion
+
+Raw CSV files are loaded into pandas DataFrames.
+
+### 2. Data Profiling
+
+The datasets are initially profiled to identify:
+
+* Number of records
+* Column structure
 * Missing values
 * Duplicate records
 * Data types
-* Categorical value distributions
+* Categorical distributions
 * Numerical statistics
 
----
+### 3. Data Quality Assessment
 
-## 2. Data Quality Assessment
+The pipeline checks for potential data-quality issues including:
 
-Several data quality checks are performed before analytical processing.
-
-### Duplicate Detection
-
-Duplicate records are identified in customer and order-item data.
-
-Customer IDs are also checked separately because a duplicated customer ID can violate the expected primary-key structure.
-
-### Missing Values
-
-Missing values are analyzed across all datasets.
-
-Categorical missing values are handled using an `Unknown` category where appropriate.
-
-For example:
-
-```text
-gender → Unknown
-city → Unknown
-province → Unknown
-acquisition_channel → Unknown
-payment_method → Unknown
-```
-
-Missing discounts are interpreted as zero discount.
-
-### Invalid Values
-
-Business-rule validation is applied to transactional fields.
-
-Examples include:
-
-* Non-positive quantities
+* Duplicate records
+* Duplicate customer IDs
+* Missing values
+* Invalid dates
+* Negative monetary values
+* Zero or negative quantities
 * Negative unit prices
-* Negative order amounts
-* Negative payment amounts
 
-Invalid order-item quantities and negative prices are removed before analytical processing.
+### 4. Referential Integrity Validation
 
----
+Relationships between tables are validated before loading the data into the database.
 
-## 3. Date Standardization
-
-Date fields are converted into pandas datetime format.
-
-Invalid date values are converted to `NaT` using:
-
-```python
-pd.to_datetime(..., errors="coerce")
-```
-
-The project then investigates missing dates by business status to determine whether missing values may be related to specific operational states.
-
----
-
-## 4. Referential Integrity
-
-Relationships between transactional and master data are validated before creating the database.
-
-Examples:
+The following relationships are checked:
 
 ```text
 Orders → Customers
@@ -165,15 +119,33 @@ Order Items → Products
 Payments → Orders
 ```
 
-This prevents orphan records from entering the relational database.
+This helps identify orphan records and prevents invalid relationships from entering the relational database.
+
+### 5. Data Cleaning
+
+The cleaning process includes:
+
+* Converting date fields to datetime
+* Removing duplicate records
+* Handling missing categorical values
+* Handling missing payment methods
+* Treating missing discounts as zero
+* Removing order items with missing quantities
+* Removing invalid quantities
+* Removing negative unit prices
+* Resolving duplicated customer IDs
+
+### 6. Data Validation
+
+Critical business and structural rules are validated using explicit checks and assertions before database loading.
 
 ---
 
-## 5. SQLite Database
+## Relational Database
 
-After cleaning, the datasets are loaded into a relational SQLite database.
+The cleaned datasets are loaded into a SQLite relational database.
 
-The database contains five tables:
+The database contains the following tables:
 
 ```text
 customers
@@ -183,33 +155,41 @@ order_items
 payments
 ```
 
-Primary keys and foreign keys are defined to represent the relationships between the tables.
+The database schema is defined in:
 
-SQLite foreign-key enforcement is also enabled during the database creation process.
+`schema.sql`
+
+Primary keys and foreign keys are used to represent relationships between the tables.
+
+SQLite foreign-key enforcement is enabled during database creation.
 
 ---
 
-## 6. SQL Analysis
+## SQL Analysis
 
-The project includes several analytical SQL queries.
+The project includes several SQL-based business analyses.
 
-### Top 10 Customers by Total Sales
+### 1. Order Status Analysis
 
-Customer sales are calculated using order-item level data:
+The distribution of orders across different statuses is analyzed to provide an overview of the order lifecycle.
+
+### 2. Top 10 Customers by Sales
+
+Customers are ranked according to total realized sales.
+
+The calculation is based on:
 
 ```text
 Quantity × Unit Price × (1 − Discount %)
 ```
 
-Only `delivered` and `completed` orders are included.
+Only `delivered` and `completed` orders are included in the calculation.
 
-The query identifies the ten customers generating the highest realized sales.
+### 3. Top 3 Products per Category
 
----
+Products are ranked within each category based on realized sales.
 
-### Top 3 Products per Category
-
-Products are ranked within each category using the SQL window function:
+The analysis uses a SQL window function:
 
 ```sql
 ROW_NUMBER() OVER (
@@ -218,27 +198,73 @@ ROW_NUMBER() OVER (
 )
 ```
 
-This demonstrates the use of SQL window functions for group-level ranking.
+This demonstrates group-level ranking using SQL window functions.
 
----
+### 4. Order and Payment Status Consistency
 
-### Order and Payment Status Inconsistencies
+Potential inconsistencies between order and payment statuses are identified.
 
-The project identifies potentially inconsistent combinations such as:
+Examples include:
 
 ```text
-Cancelled order + Paid payment
-Returned order + Paid payment
-Delivered order + Failed payment
+Cancelled Order + Paid Payment
+Returned Order + Paid Payment
+Delivered Order + Failed Payment
 ```
 
-These cases can be useful for identifying operational issues or potential data-quality problems.
+These checks can help identify operational issues or potential data-quality problems.
+
+### 5. Sales by Product Category
+
+Total realized sales are aggregated by product category to compare category-level performance.
 
 ---
 
-### Sales by Product Category
+## Key SQL Concepts Demonstrated
 
-Total realized sales are aggregated by product category to provide a high-level view of category performance.
+The SQL analysis includes:
+
+* `JOIN`
+* `GROUP BY`
+* `ORDER BY`
+* Aggregate functions
+* `WHERE`
+* Common Table Expressions (CTEs)
+* Window functions
+* `ROW_NUMBER()`
+* Conditional filtering
+* Foreign-key validation
+
+The main analytical queries are available in:
+
+`queries.sql`
+
+---
+
+## Project Files
+
+```text
+E-commerce-Sales-Analytics/
+│
+├── README.md
+├── ETL_Pipeline.py
+├── Report.md
+├── queries.sql
+├── schema.sql
+├── requirements.txt
+└── data.zip
+```
+
+### File Description
+
+| File               | Purpose                                   |
+| ------------------ | ----------------------------------------- |
+| `ETL_Pipeline.py`  | Main Python ETL and data-quality pipeline |
+| `schema.sql`       | Relational database schema                |
+| `queries.sql`      | Main analytical SQL queries               |
+| `Report.md`        | Detailed analysis and findings            |
+| `requirements.txt` | Python dependencies                       |
+| `data.zip`         | Raw CSV datasets                          |
 
 ---
 
@@ -246,106 +272,88 @@ Total realized sales are aggregated by product category to provide a high-level 
 
 * Python
 * Pandas
-* SQLite
 * SQL
+* SQLite
 * Jupyter Notebook / Google Colab
-* Git / GitHub
+* Git
+* GitHub
 
 ---
 
-## Project Structure
-
-```text
-Yootab-Sales-Analytics/
-│
-├── README.md
-├── analysis/
-│   └── yootab_sales_analysis.py
-│
-├── sql/
-│   ├── schema.sql
-│   └── queries.sql
-│
-├── database/
-│   └── database1.db
-│
-├── data/
-│   └── README.md
-│
-├── requirements.txt
-└── .gitignore
-```
-
----
-
-## Key Skills Demonstrated
+## Skills Demonstrated
 
 ### Data Analytics
 
 * Data profiling
+* Exploratory data analysis
 * Data cleaning
 * Missing-value handling
 * Duplicate detection
 * Business-rule validation
-* Exploratory data analysis
+* Data-quality analysis
 
 ### SQL
 
-* Multi-table joins
-* Aggregations
-* `GROUP BY`
-* `ORDER BY`
-* Common Table Expressions (CTEs)
+* Relational joins
+* Aggregation
+* CTEs
 * Window functions
 * Ranking
-* Relational integrity checks
+* Data-quality queries
+* Referential integrity validation
 
 ### Data Engineering Fundamentals
 
+* ETL pipeline development
 * Relational data modeling
 * Primary and foreign keys
 * Data validation
-* Loading structured data into a database
-* Reproducible database creation
+* Database creation
+* Loading structured data into a relational database
 
 ---
 
 ## Reproducibility
 
-The project is designed as a reproducible analytical workflow.
+To reproduce the project:
 
-The Python script performs the following steps:
+1. Download or clone the repository.
+2. Extract `data.zip`.
+3. Install the required Python dependency:
 
-1. Loads the raw datasets.
-2. Profiles the data.
-3. Identifies data-quality issues.
-4. Cleans and validates the datasets.
-5. Creates the SQLite database.
-6. Loads the cleaned data.
-7. Executes analytical SQL queries.
-8. Validates the resulting database.
+```bash
+pip install -r requirements.txt
+```
+
+4. Update the input file paths in `ETL_Pipeline.py` if necessary.
+5. Run the Python pipeline.
+6. The pipeline performs the data preparation and database-loading process.
+7. The SQL queries in `queries.sql` can then be executed against the resulting database.
 
 ---
 
 ## Future Improvements
 
-Potential extensions of this project include:
+Possible extensions of the project include:
 
-* Customer segmentation using RFM analysis
+* Customer RFM segmentation
+* Customer retention analysis
 * Monthly and quarterly sales trends
-* Customer retention and repeat-purchase analysis
+* Sales-channel performance analysis
 * Product profitability analysis
-* Sales-channel performance comparison
 * Payment conversion analysis
-* Automated data-quality tests
-* Interactive BI dashboard
+* Automated data-quality testing
 * Migration from SQLite to SQL Server
-* Development of an automated ETL pipeline
+* Automated scheduled ETL execution
+* BI dashboard development
 
 ---
 
 ## Disclaimer
 
-This project is intended for portfolio and educational purposes.
+This project is developed for portfolio and educational purposes.
 
-The analytical workflow is designed to demonstrate practical data analytics, SQL, and data-quality concepts using an e-commerce-style relational dataset.
+The dataset is intended to represent an e-commerce business environment and is used to demonstrate practical data analytics, ETL, SQL, and data-quality concepts.
+
+```
+```
